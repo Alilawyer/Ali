@@ -60,53 +60,41 @@
     <script>
         async function fetchTelegramData() {
             try {
-                // استخدام وسيط مخصص لتجاوز القيود وقراءة تليغرام بسلام
-                const channelUrl = "https://t.me/s/dollariraqi";
-                const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(channelUrl)}`;
+                // استخدام خدمة rss2json الموثوقة لقراءة قناة التليغرام كبيانات منظمة
+                const channelName = "dollariraqi";
+                const apiUrl = `https://api.rss2json.com/v1/api.json?rss_url=https%3A%2F%2Ft.me%2Fs%2F${channelName}`;
 
-                let response = await fetch(proxyUrl);
-                if (!response.ok) throw new Error("Network response was not ok");
-                
+                let response = await fetch(apiUrl);
                 let data = await response.json();
 
-                if (data && data.contents) {
-                    let parser = new DOMParser();
-                    let doc = parser.parseFromString(data.contents, 'text/html');
+                if (data.status === 'ok' && data.items && data.items.length > 0) {
+                    let latestPost = data.items[0];
+                    let rawText = latestPost.description || latestPost.title;
+                    let pubDate = new Date(latestPost.pubDate);
 
-                    let messages = doc.querySelectorAll('.tgme_widget_message_text');
-                    let dates = doc.querySelectorAll('.tgme_widget_message_date time');
+                    // تنظيف النص من وسوم الـ HTML الزائدة
+                    let cleanText = rawText.replace(/<[^>]*>?/gm, '');
 
-                    if (messages.length > 0) {
-                        let latestMsg = messages[messages.length - 1].innerText;
-                        let latestTime = dates.length > 0 ? dates[dates.length - 1].getAttribute('datetime') : "";
+                    // عرض النص في الموقع
+                    document.getElementById('lastMessage').innerText = cleanText;
 
-                        // عرض نص الرسالة
-                        document.getElementById('lastMessage').innerText = latestMsg;
-
-                        // عرض الوقت المحلي
-                        if (latestTime) {
-                            let formattedDate = new Date(latestTime).toLocaleTimeString('ar-IQ', { hour: '2-digit', minute: '2-digit' });
-                            document.getElementById('messageTime').innerText = `آخر تحديث: ${formattedDate}`;
-                        } else {
-                            let now = new Date();
-                            document.getElementById('messageTime').innerText = `آخر تحديث: ` + now.toLocaleTimeString('ar-IQ');
-                        }
-                    } else {
-                        document.getElementById('lastMessage').innerText = "لا توجد رسائل حديثة متاحة حالياً.";
-                    }
+                    // عرض الوقت بشكل مرتب
+                    let timeString = pubDate.toLocaleTimeString('ar-IQ', { hour: '2-digit', minute: '2-digit' });
+                    let dateString = pubDate.toLocaleDateString('ar-IQ');
+                    document.getElementById('messageTime').innerText = `آخر تحديث: ${dateString} - ${timeString}`;
                 } else {
-                    document.getElementById('lastMessage').innerText = "تعذر تحميل البيانات من القناة.";
+                    document.getElementById('lastMessage').innerText = "تعذر جلب الرسائل حالياً.";
                 }
             } catch (error) {
-                console.error("Fetch Error:", error);
-                document.getElementById('lastMessage').innerText = "يرجى رفع الملف على استضافة ويب حقيقية (مثل GitHub Pages أو Netlify) لأن المتصفح يحظر القراءة من الملفات المحلية للخزنة الداخلية.";
+                console.error("Error:", error);
+                document.getElementById('lastMessage').innerText = "حدث خطأ أثناء جلب البيانات.";
             }
         }
 
-        // تشغيل الدالة فوراً
+        // تشغيل الدالة فور فتح الصفحة
         fetchTelegramData();
 
-        // التحديث التلقائي كل دقيقة
+        // تحديث البيانات تلقائياً كل دقيقة
         setInterval(fetchTelegramData, 60000);
     </script>
 
