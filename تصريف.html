@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>سعر السوق المباشر</title>
+    <style>
+        body {
+            font-family: Tahoma, sans-serif;
+            background-color: #f4f7f6;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+        .price-card {
+            background: #ffffff;
+            padding: 25px;
+            border-radius: 14px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            width: 360px;
+            text-align: center;
+            border-top: 4px solid #27ae60;
+        }
+        .card-title {
+            font-size: 16px;
+            color: #555;
+            margin-bottom: 10px;
+            font-weight: bold;
+        }
+        .price-text {
+            font-size: 16px;
+            color: #2c3e50;
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            line-height: 1.6;
+            white-space: pre-wrap;
+            text-align: right;
+            max-height: 160px;
+            overflow-y: auto;
+        }
+        .time-box {
+            font-size: 12px;
+            color: #888;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="price-card">
+        <div class="card-title">📈 سعر السوق اللحظي</div>
+        <div class="price-text" id="lastMessage">جاري تحديث الأسعار...</div>
+        <div class="time-box" id="messageTime">الوقت: --</div>
+    </div>
+
+    <script>
+        async function fetchTelegramData() {
+            try {
+                // استخدام وسيط مخصص لتجاوز القيود وقراءة تليغرام بسلام
+                const channelUrl = "https://t.me/s/dollariraqi";
+                const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(channelUrl)}`;
+
+                let response = await fetch(proxyUrl);
+                if (!response.ok) throw new Error("Network response was not ok");
+                
+                let data = await response.json();
+
+                if (data && data.contents) {
+                    let parser = new DOMParser();
+                    let doc = parser.parseFromString(data.contents, 'text/html');
+
+                    let messages = doc.querySelectorAll('.tgme_widget_message_text');
+                    let dates = doc.querySelectorAll('.tgme_widget_message_date time');
+
+                    if (messages.length > 0) {
+                        let latestMsg = messages[messages.length - 1].innerText;
+                        let latestTime = dates.length > 0 ? dates[dates.length - 1].getAttribute('datetime') : "";
+
+                        // عرض نص الرسالة
+                        document.getElementById('lastMessage').innerText = latestMsg;
+
+                        // عرض الوقت المحلي
+                        if (latestTime) {
+                            let formattedDate = new Date(latestTime).toLocaleTimeString('ar-IQ', { hour: '2-digit', minute: '2-digit' });
+                            document.getElementById('messageTime').innerText = `آخر تحديث: ${formattedDate}`;
+                        } else {
+                            let now = new Date();
+                            document.getElementById('messageTime').innerText = `آخر تحديث: ` + now.toLocaleTimeString('ar-IQ');
+                        }
+                    } else {
+                        document.getElementById('lastMessage').innerText = "لا توجد رسائل حديثة متاحة حالياً.";
+                    }
+                } else {
+                    document.getElementById('lastMessage').innerText = "تعذر تحميل البيانات من القناة.";
+                }
+            } catch (error) {
+                console.error("Fetch Error:", error);
+                document.getElementById('lastMessage').innerText = "يرجى رفع الملف على استضافة ويب حقيقية (مثل GitHub Pages أو Netlify) لأن المتصفح يحظر القراءة من الملفات المحلية للخزنة الداخلية.";
+            }
+        }
+
+        // تشغيل الدالة فوراً
+        fetchTelegramData();
+
+        // التحديث التلقائي كل دقيقة
+        setInterval(fetchTelegramData, 60000);
+    </script>
+
+</body>
+</html>
